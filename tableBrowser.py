@@ -14,6 +14,7 @@ import datetime
 import hashlib
 import re
 import sys
+import os
 
 # start site-dependent variables
 URL = "http://145.100.59.103/cgi-bin/puregome/"
@@ -69,6 +70,7 @@ def readHumanLabels(humanLabels):
         fields = line.rstrip().split()
         username = fields.pop(0)
         date = fields.pop(0)
+        tweetId = fields.pop(0)
         index = int(fields.pop(0))
         label = " ".join(fields)
         if "username" in session and username == session["username"]:
@@ -92,10 +94,22 @@ def storeHumanLabel(index,label,username):
         log("warning: refusing to store empty label: "+str(index)+"#"+str(label)+"#"+str(username))
         return()
     humanLabels[index] = label
+    tweetId = data[index][IDCOLUMNID]
     date = datetime.datetime.today().strftime("%Y%m%d%H%M%S")
     outFile = open(HUMANLABELFILE,"a",encoding="utf-8")
-    outFile.write(username+" "+date+" "+str(index)+" "+label+"\n")
+    outFile.write(username+" "+date+" "+tweetId+" "+str(index)+" "+label+"\n")
     outFile.close()
+    return()
+
+def storeAllHumanLabels():
+    inFile = open(HUMANLABELFILE,"r",encoding="utf-8")
+    outFile = open("tmp.txt","w",encoding="utf-8")
+    for line in inFile:
+        fields = line.rstrip().split()
+        index = int(fields[2])
+        print(line.strip()+" "+data[index][IDCOLUMNID],file=outFile)
+    outFile.close()
+    inFile.close()
     return()
 
 def generalize(index,label,username):
