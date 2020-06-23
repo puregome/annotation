@@ -20,18 +20,21 @@ import os
 URL = "http://145.100.59.103/cgi-bin/puregome/"
 BASEDIR = "/home/cloud/projects/puregome/annotation"
 # end site-dependent variables
-DATAFILENAME = BASEDIR+"/data/mondkapje-tweets.csv"
+DATAFILENAME = BASEDIR+"/data/data.csv"
 HUMANLABELFILE = BASEDIR+"/data/human-labels.txt"
 USERFILE = BASEDIR+"/data/users.txt"
 LOGFILE = BASEDIR+"/data/logfile"
+LABELFILE = BASEDIR+"/data/LABELS.txt"
 BORDERPAGES = 2
 UNKNOWN = ""
-labels = {"0":"ERROR","1":"IRRELEVANT","2":"NEUTRAL","3":"POSITIVE","4":"NEGATIVE","5":"ERROR" }
 fieldLabels = [ "Human", "Id", "User", "Tweet" ]
 fieldsShow = { "Human":True, "Id":False, "User":False, "Tweet":True }
 nbrOfItems = 0
 TEXTCOLUMNID = 2
 IDCOLUMNID = 0
+TEXT = "text"
+ID = "id"
+NAME = "name"
 
 def useFieldsStatus(fieldsStatus):
     fieldsShow = {}
@@ -54,14 +57,14 @@ def readData(inFileName):
     data = []
     humanLabels = []
     inFile = open(inFileName,"r",encoding="utf-8")
-    csvreader = csv.reader(inFile,delimiter=',',quotechar='"')
+    csvreader = csv.DictReader(inFile,delimiter=',',quotechar='"',fieldnames=[ID,NAME,TEXT])
     lineNbr = 0
     for row in csvreader:
         lineNbr += 1
         data.append(row)
         humanLabels.append(UNKNOWN)
     inFile.close()
-    data = sorted(data,key=lambda k:k[TEXTCOLUMNID])
+    # data = sorted(data,key=lambda k:k[TEXT])
     return(data,humanLabels)
 
 def readHumanLabels(humanLabels):
@@ -94,7 +97,7 @@ def storeHumanLabel(index,label,username):
         log("warning: refusing to store empty label: "+str(index)+"#"+str(label)+"#"+str(username))
         return()
     humanLabels[index] = label
-    tweetId = data[index][IDCOLUMNID]
+    tweetId = data[index][ID]
     date = datetime.datetime.today().strftime("%Y%m%d%H%M%S")
     outFile = open(HUMANLABELFILE,"a",encoding="utf-8")
     outFile.write(username+" "+date+" "+tweetId+" "+str(index)+" "+label+"\n")
@@ -107,15 +110,15 @@ def storeAllHumanLabels():
     for line in inFile:
         fields = line.rstrip().split()
         index = int(fields[2])
-        print(line.strip()+" "+data[index][IDCOLUMNID],file=outFile)
+        print(line.strip()+" "+data[index][ID],file=outFile)
     outFile.close()
     inFile.close()
     return()
 
 def generalize(index,label,username):
-    text = data[index][TEXTCOLUMNID]
+    text = data[index][TEXT]
     for i in range(0,len(data)):
-        if data[i][TEXTCOLUMNID] == text and humanLabels[i] != label:
+        if data[i][TEXT] == text and humanLabels[i] != label:
             storeHumanLabel(i,label,username)
     return()
 
@@ -167,6 +170,18 @@ def select(human,labelH):
     if human == "" or human == labelH: return(True)
     else: return(False)
 
+def readLabels():
+    inFile = open(LABELFILE,"r")
+    counter = 0
+    labels = {}
+    for line in inFile:
+        line = line.strip()
+        if line != "":
+            labels[str(counter)] = str(line)
+            counter += 1
+    inFile.close()
+    return(labels)
+
 @app.route('/',methods=['GET','POST'])
 def process():
     global fieldsShow,humanLabels
@@ -180,6 +195,7 @@ def process():
     pageSize = 10
     formdata = {}
     changeFieldsStatus = ""
+    labels = readLabels()
     humanLabels = readHumanLabels(humanLabels)
     fieldsStatus = getFieldsStatus(fieldsShow)
     if request.method == "GET": formdata = request.args
