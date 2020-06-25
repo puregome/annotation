@@ -12,7 +12,9 @@ from wtforms import Form, StringField, SelectField, PasswordField, validators
 import csv
 import datetime
 import hashlib
+import random
 import re
+import string
 import sys
 import os
 
@@ -26,6 +28,7 @@ USERFILE = BASEDIR+"/data/users.txt"
 LOGFILE = BASEDIR+"/data/logfile"
 LABELFILE = BASEDIR+"/data/LABELS.txt"
 BORDERPAGES = 2
+PASSWORDLENGTH = 8
 UNKNOWN = ""
 fieldLabels = [ "Human", "Id", "User", "Tweet" ]
 fieldsShow = { "Human":True, "Id":False, "User":False, "Tweet":True }
@@ -57,7 +60,7 @@ def readData(inFileName):
     data = []
     humanLabels = []
     inFile = open(inFileName,"r",encoding="utf-8")
-    csvreader = csv.DictReader(inFile,delimiter=',',quotechar='"',fieldnames=[ID,NAME,TEXT])
+    csvreader = csv.DictReader(inFile,delimiter=',',quotechar='"')
     lineNbr = 0
     for row in csvreader:
         lineNbr += 1
@@ -91,6 +94,12 @@ def readUsers():
         users[username] = password
     inFile.close()
     return(users)
+
+def writeUsers(users):
+    outFile = open(USERFILE,"w",encoding="utf-8")
+    for username in users:
+        print(":".join([username,users[username]]),file=outFile)    
+    outFile.close()
 
 def storeHumanLabel(index,label,username):
     if label == "":
@@ -165,6 +174,24 @@ def login():
         else: return(render_template("login.html", message="Incorrect user name or password"))
     else:
         return(render_template('login.html', message=""))
+
+def makePassword():
+    return("".join(random.choice(string.ascii_lowercase) for i in range(0,PASSWORDLENGTH)))
+
+@app.route("/register",methods=["GET","POST"])
+def register():
+    if request.method == "POST":
+        formdata = request.form
+        username = formdata["email"].lower()
+        users = readUsers()
+        if username in users:
+           return(render_template("register.html", message="Email address "+username+" is already used, choose another address",success=""))
+        password = makePassword()
+        users[username] = encode(password)
+        writeUsers(users)
+        return(render_template("register.html", message="An account has been created for email address "+username+" with password: "+password,success="yes"))
+    else:
+        return(render_template('register.html', message="", success=""))
 
 def select(human,labelH):
     if human == "" or human == labelH: return(True)
