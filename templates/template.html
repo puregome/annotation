@@ -9,6 +9,16 @@
     <p>
     <form action="{{ URL }}" method="post">
     <input type="hidden" name="page" id="page" value="{{ page }}"/>
+    <strong>File</strong>:
+    <select name="fileName" onchange="this.form.submit()">
+        {% for f in fileNames %}
+            <option value="{{ f }}" 
+            {% if f == fileName %} 
+            selected 
+            {% endif %}
+            >{{ f }}</option>
+        {% endfor %}
+    </select>
     <strong>Human label</strong>:
     <select name="human" onchange="this.form.submit()">
         <option value=""></option>
@@ -36,6 +46,8 @@
         {% endfor %}
     </select>
     <input type="hidden" name="fieldsStatus" id="fieldsStatus" value="{{ fieldsStatus }}" />
+    <input type="hidden" name="lastFileName" id="lastFileName" value="{{ fileName }}" />
+    <input type="hidden" name="lastQuery" id="lastQuery" value="{{ query }}" />
     <strong>Page size</strong>:
     <select name="size" onchange="this.form.submit()">
         {% for key in pageSizes %}
@@ -46,6 +58,8 @@
 	>{{ key }}</option>
         {% endfor %}
     </select>
+    <strong>Query</strong>:
+    <input type="text" id="query" name="query" size="10" value={{ query }}>
     <strong>User</strong>: {{ username }}
     (<a href="{{ URL }}?logout">logout</a>)
     <p>
@@ -56,11 +70,12 @@
 	{% if p == page %}
 	<strong>{{ p }}</strong>
 	{% else %}
-	<a href="{{ URL }}/?page={{ p }}&fasttext={{ fasttext }}&deeplearn={{ deeplearn }}&human={{ human }}&pageSize={{ pageSize }}&fieldsStatus={{ fieldsStatus }}">{{ p }}</a>
+	<a href="{{ URL }}/?page={{ p }}&fileName={{ fileName }}&human={{ human }}&pageSize={{ pageSize }}&fieldsStatus={{ fieldsStatus }}&query={{ query }}&lastQuery={{ query }}">{{ p }}</a>
 	{% endif %}
 	{% endfor %}
     {% if nbrOfSelected > 0 %}
     <hr>
+    <div id="helpTextDiv">{{ helpText }}<hr></div>
     <p>
     <font size="3">
     <table>
@@ -80,13 +95,13 @@
         <tr>
 	    <td align="right">{{ key+1 }}.</td>
 	    {% if fieldsShow["Human"] %}
-	    <td>
+	    <td valign="top">
 	       <select name="data{{ index|length }}" onchange="this.form.submit()">
 		       <option value="{{ key ~ " " }}"></option>
 	       {% for l in labels|dictsort(false,'value') %}
 	       {% if l[1] != "ERROR" %}
 	       <option value="{{ key ~ " " ~ l[1] }}"
-	       {% if humanLabels[key] == l[1] %}
+	       {% if humanLabels[data[key]["id"]] == l[1] %}
 	       selected
 	       {% endif %}
 		>{{ l[1] }}</option>
@@ -96,13 +111,13 @@
 	    </td>
 	    {% endif %}
 	    {% if fieldsShow["Id"] %}
-	    <td>{{ item[0] }}</td>
+	    <td valign="top"><a href="https://twitter.com/user/status/{{ item["id"] }}">{{ item["id"] }}</a></td>
 	    {% endif %}
 	    {% if fieldsShow["User"] %}
-	    <td>{{ item[1] }}</td>
+	    <td valign="top"><a href="https://twitter.com/{{ item["name"] }}">{{ item["name"] }}</a></td>
 	    {% endif %}
 	    {% if fieldsShow["Tweet"] %}
-	    <td><a href="http://twitter.com/{{ item[1] }}/status/{{ item[0] }}">{{ item[2] }}</a></td>
+	    <td valign="top">{{ item["text"] }}</td>
 	    {% endif %}
 	</tr>
         {% endif %}
@@ -116,7 +131,7 @@
 	{% if p == page %}
 	<strong>{{ p }}</strong>
 	{% else %}
-	<a href="{{ URL }}/?page={{ p }}&fasttext={{ fasttext }}&deeplearn={{ deeplearn }}&human={{ human }}&pageSize={{ pageSize }}&fieldsStatus={{ fieldsStatus }}">{{ p }}</a>
+	<a href="{{ URL }}/?page={{ p }}&fileName={{ fileName }}&human={{ human }}&pageSize={{ pageSize }}&fieldsStatus={{ fieldsStatus }}&query={{ query }}&lastQuery={{ query }}">{{ p }}</a>
 	{% endif %}
     {% endfor %}
     <hr>

@@ -23,7 +23,6 @@ URL = "http://145.100.59.103/cgi-bin/puregome/"
 BASEDIR = "/home/cloud/projects/puregome/annotation/"
 # end site-dependent variables
 DATADIR = BASEDIR+"data/"
-DATAFILEDEFAULT = "data.csv"
 HUMANLABELFILE = "human-labels.txt"
 USERFILE = "users.txt"
 LOGFILE = "logfile"
@@ -37,10 +36,12 @@ nbrOfItems = 0
 TEXTCOLUMNID = 2
 IDCOLUMNID = 0
 TEXT = "text"
-ID = "id_str"
+ID = "id"
+IDSTR = "id_str"
 NAME = "user"
 CSVSUFFIX = r".csv$"
 TWEETS = "tweets"
+HELPFILE = "help.txt"
 
 def useFieldsStatus(fieldsStatus):
     fieldsShow = {}
@@ -59,16 +60,27 @@ def getFieldsStatus(fieldsShow):
         if fieldsShow[label]: fieldsStatus += 1
     return(fieldsStatus)
 
-def readData(inFileName):
+def readHelpText(inFileName):
+    helpText = ""
+    inFile = open(DATADIR+inFileName+"."+HELPFILE)
+    for line in inFile: helpText += line
+    inFile.close()
+    return(helpText)
+
+def readData(inFileName,query=""):
     data = []
-    humanLabels = []
+    humanLabels = {}
     inFile = open(DATADIR+inFileName,"r",encoding="utf-8")
     csvreader = csv.DictReader(inFile,delimiter=',',quotechar='"')
     lineNbr = 0
     for row in csvreader:
         lineNbr += 1
-        data.append(row)
-        humanLabels.append(UNKNOWN)
+        row[TEXT] = re.sub(r"\\n"," ",row[TEXT])
+        if IDSTR in row and not ID in row:
+            row[ID] = row[IDSTR]
+        if query == "" or re.search(query,row[TEXT],flags=re.IGNORECASE):
+            data.append(row)
+            humanLabels[row[ID]] = UNKNOWN
     inFile.close()
     if re.search(TWEETS,inFileName):
         data = sorted(data,key=lambda k:k[TEXT])
@@ -84,7 +96,7 @@ def readHumanLabels(fileName,humanLabels):
         index = int(fields.pop(0))
         label = " ".join(fields)
         if "username" in session and username == session["username"]:
-            humanLabels[index] = label
+            humanLabels[tweetId] = label
     inFile.close()
     return(humanLabels)
 
@@ -111,9 +123,8 @@ def storeHumanLabel(fileName,index,label,username):
     if label == "":
         log("warning: refusing to store empty label: "+str(index)+"#"+str(label)+"#"+str(username))
         return()
-    print(index,len(humanLabels),len(data),file=sys.stderr)
-    humanLabels[index] = label
     tweetId = data[index][ID]
+    humanLabels[tweetId] = label
     date = datetime.datetime.today().strftime("%Y%m%d%H%M%S")
     outFile = open(DATADIR+fileName+"."+HUMANLABELFILE,"a",encoding="utf-8")
     outFile.write(username+" "+date+" "+tweetId+" "+str(index)+" "+label+"\n")
@@ -134,7 +145,7 @@ def storeAllHumanLabels(fileName):
 def generalize(fileName,index,label,username):
     text = data[index][TEXT]
     for i in range(0,len(data)):
-        if data[i][TEXT] == text and humanLabels[i] != label:
+        if data[i][TEXT] == text and humanLabels[data[i][ID]] != label:
             storeHumanLabel(fileName,i,label,username)
     return()
 
@@ -161,7 +172,7 @@ def computePageBoundaries(nbrOfSelected,page,pageSize):
 
 app = Flask(__name__)
 data = []
-humanLabels = []
+humanLabels = {}
 
 def encode(password):
     import random
@@ -241,6 +252,8 @@ def process():
     fileNames = getFileNames()
     fileName = fileNames[0]
     lastFileName = ""
+    query = ""
+    lastQuery = ""
     if request.method == "GET": formdata = request.args
     elif request.method == "POST": formdata = request.form
     for key in formdata:
@@ -259,13 +272,18 @@ def process():
             fileName = formdata["fileName"]
         elif key == "lastFileName" and formdata["lastFileName"] in fileNames: 
             lastFileName = formdata["lastFileName"]
+        elif key == "query": 
+            query = formdata["query"]
+        elif key == "lastQuery": 
+            lastQuery = formdata["lastQuery"]
         elif key == "logout":
             session.pop("username")
             return(redirect(URL))
-    data, humanLabels = readData(fileName)
+    data, humanLabels = readData(fileName,query)
     labels = readLabels(fileName)
     humanLabels = readHumanLabels(fileName,humanLabels)
-    if lastFileName != "" and fileName != lastFileName:
+    helpText = readHelpText(fileName)
+    if (lastFileName != "" and fileName != lastFileName) or query != lastQuery:
         page = 1
     else:
         for key in formdata:
@@ -274,23 +292,23 @@ def process():
                     fields = formdata[key].split()
                     index = int(fields.pop(0))
                     label = " ".join(fields)
-                    if humanLabels[index] != label:
+                    if humanLabels[data[index][ID]] != label:
                         storeHumanLabel(fileName,index,label,username)
                         generalize(fileName,index,label,username)
     if changeFieldsStatus != "":
         fieldsShow[changeFieldsStatus] = not fieldsShow[changeFieldsStatus]
         fieldsStatus = getFieldsStatus(fieldsShow)
     for d in range(0,len(data)):
-        if select(human,humanLabels[d]):
+        if select(human,humanLabels[data[d][ID]]):
             nbrOfSelected += 1
     page, minPage, maxPage = computePageBoundaries(nbrOfSelected,page,pageSize)
     counter = 0
     for d in range(0,len(data)):
-        if select(human,humanLabels[d]):
+        if select(human,humanLabels[data[d][ID]]):
             if counter >= pageSize*(page-1) and \
                counter < pageSize*page: selected[d] = True 
             counter += 1
-    nbrOfLabeled = len([l for l in humanLabels if l != UNKNOWN])
-    return(render_template('template.html', data=data, labels=labels, fieldsShow=fieldsShow , human=human, selected=selected, nbrOfSelected=nbrOfSelected, nbrOfLabeled=nbrOfLabeled, humanLabels=humanLabels, page=page, minPage=minPage, maxPage=maxPage, pageSize=pageSize, URL=URL, username=username, fieldsStatus=fieldsStatus, fileNames=fileNames, fileName=fileName))
+    nbrOfLabeled = len([l for l in humanLabels.values() if l != UNKNOWN])
+    return(render_template('template.html', data=data, labels=labels, fieldsShow=fieldsShow , human=human, selected=selected, nbrOfSelected=nbrOfSelected, nbrOfLabeled=nbrOfLabeled, humanLabels=humanLabels, page=page, minPage=minPage, maxPage=maxPage, pageSize=pageSize, URL=URL, username=username, fieldsStatus=fieldsStatus, fileNames=fileNames, fileName=fileName, helpText=helpText, query=query))
 
 app.secret_key = "PLEASEREPLACETHIS"
