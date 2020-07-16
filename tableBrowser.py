@@ -27,9 +27,10 @@ HUMANLABELFILE = "human-labels.txt"
 USERFILE = "users.txt"
 LOGFILE = "logfile"
 LABELFILE = "LABELS.txt"
-BORDERPAGES = 2
+BORDERPAGES = 4
 PASSWORDLENGTH = 8
-UNKNOWN = ""
+UNLABELED = ""
+UNLABELEDTEXT = "UNLABELED"
 fieldLabels = [ "Human", "Id", "User", "Tweet" ]
 fieldsShow = { "Human":True, "Id":False, "User":False, "Tweet":True }
 nbrOfItems = 0
@@ -42,6 +43,10 @@ NAME = "user"
 CSVSUFFIX = r".csv$"
 TWEETS = "tweets"
 HELPFILE = "help.txt"
+
+app = Flask(__name__)
+data = []
+humanLabels = {}
 
 def useFieldsStatus(fieldsStatus):
     fieldsShow = {}
@@ -80,7 +85,7 @@ def readData(inFileName,query=""):
             row[ID] = row[IDSTR]
         if query == "" or re.search(query,row[TEXT],flags=re.IGNORECASE):
             data.append(row)
-            humanLabels[row[ID]] = UNKNOWN
+            humanLabels[row[ID]] = UNLABELED
     inFile.close()
     if re.search(TWEETS,inFileName):
         data = sorted(data,key=lambda k:k[TEXT])
@@ -131,18 +136,9 @@ def storeHumanLabel(fileName,index,label,username):
     outFile.close()
     return()
 
-def storeAllHumanLabels(fileName):
-    inFile = open(DATADIR+fileName+"."+HUMANLABELFILE,"r",encoding="utf-8")
-    outFile = open("tmp.txt","w",encoding="utf-8")
-    for line in inFile:
-        fields = line.rstrip().split()
-        index = int(fields[2])
-        print(line.strip()+" "+data[index][ID],file=outFile)
-    outFile.close()
-    inFile.close()
-    return()
-
 def generalize(fileName,index,label,username):
+    global data,humanLabels
+
     text = data[index][TEXT]
     for i in range(0,len(data)):
         if data[i][TEXT] == text and humanLabels[data[i][ID]] != label:
@@ -169,10 +165,6 @@ def computePageBoundaries(nbrOfSelected,page,pageSize):
         minPage = 1
     if page > lastPage: page = lastPage
     return(page,minPage,maxPage)
-
-app = Flask(__name__)
-data = []
-humanLabels = {}
 
 def encode(password):
     import random
@@ -213,7 +205,8 @@ def register():
         return(render_template('register.html', message="", success=""))
 
 def select(human,labelH):
-    if human == "" or human == labelH: return(True)
+    if human == "" or human == labelH or \
+       (human == UNLABELEDTEXT and labelH == UNLABELED): return(True)
     else: return(False)
 
 def readLabels(fileName):
@@ -308,7 +301,8 @@ def process():
             if counter >= pageSize*(page-1) and \
                counter < pageSize*page: selected[d] = True 
             counter += 1
-    nbrOfLabeled = len([l for l in humanLabels.values() if l != UNKNOWN])
+    nbrOfLabeled = len([i for i in range(0,len(data)) if humanLabels[data[i][ID]] != UNLABELED])
+
     return(render_template('template.html', data=data, labels=labels, fieldsShow=fieldsShow , human=human, selected=selected, nbrOfSelected=nbrOfSelected, nbrOfLabeled=nbrOfLabeled, humanLabels=humanLabels, page=page, minPage=minPage, maxPage=maxPage, pageSize=pageSize, URL=URL, username=username, fieldsStatus=fieldsStatus, fileNames=fileNames, fileName=fileName, helpText=helpText, query=query))
 
 app.secret_key = "PLEASEREPLACETHIS"
