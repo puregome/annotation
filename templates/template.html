@@ -8,7 +8,6 @@
     {% set pageSizes = ["10","20","50","100"] %}
     <p>
     <form action="{{ URL }}" method="post">
-    <input type="hidden" name="page" id="page" value="{{ page }}"/>
     <strong>File</strong>:
     <select name="fileName" onchange="this.form.submit()">
         {% for f in fileNames %}
@@ -49,7 +48,7 @@
     <input type="hidden" name="lastFileName" id="lastFileName" value="{{ fileName }}" />
     <input type="hidden" name="lastQuery" id="lastQuery" value="{{ query }}" />
     <strong>Page</strong>:
-    <input type="text" id="page" name="page" size="2" value="{{ page }}">
+    <input type="text" id="page" name="page" size="2" value="{{ page }}" onchange="this.form.submit()">
     <strong>Page size</strong>:
     <select name="size" onchange="this.form.submit()">
         {% for key in pageSizes %}
@@ -61,7 +60,7 @@
         {% endfor %}
     </select>
     <strong>Query</strong>:
-    <input type="text" id="query" name="query" size="10" value="{{query }}">
+    <input type="text" id="query" name="query" size="10" value="{{query }}" onchange="this.form.submit()">
     <strong>User</strong>: {{ username }}
     (<a href="{{ URL }}?logout">logout</a>)
     <p>
