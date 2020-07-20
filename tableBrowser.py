@@ -75,17 +75,22 @@ def readHelpText(inFileName):
 def readData(inFileName,query=""):
     data = []
     humanLabels = {}
+    seen = {}
     inFile = open(DATADIR+inFileName,"r",encoding="utf-8")
     csvreader = csv.DictReader(inFile,delimiter=',',quotechar='"')
     lineNbr = 0
     for row in csvreader:
         lineNbr += 1
         row[TEXT] = re.sub(r"\\n"," ",row[TEXT])
+        row[TEXT] = re.sub(r"https*://\S+"," ",row[TEXT])
+        row[TEXT] = re.sub(r"\s+"," ",row[TEXT])
+        row[TEXT] = row[TEXT].strip()
         if IDSTR in row and not ID in row:
             row[ID] = row[IDSTR]
-        if query == "" or re.search(query,row[TEXT],flags=re.IGNORECASE):
+        if not row[TEXT] in seen and (query == "" or re.search(query,row[TEXT],flags=re.IGNORECASE)):
             data.append(row)
             humanLabels[row[ID]] = UNLABELED
+            seen[row[TEXT]] = True
     inFile.close()
     if re.search(TWEETS,inFileName):
         data = sorted(data,key=lambda k:k[TEXT])
