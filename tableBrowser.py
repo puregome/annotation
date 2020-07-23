@@ -31,8 +31,8 @@ BORDERPAGES = 4
 PASSWORDLENGTH = 8
 UNLABELED = ""
 UNLABELEDTEXT = "UNLABELED"
-fieldLabels = [ "Human", "Id", "User", "Tweet" ]
-fieldsShow = { "Human":True, "Id":False, "User":False, "Tweet":True }
+fieldLabels = [ "Label", "Id", "User", "Tweet" ]
+fieldsShow = { "Label":True, "Id":False, "User":False, "Tweet":True }
 nbrOfItems = 0
 TEXTCOLUMNID = 2
 IDCOLUMNID = 0
@@ -308,6 +308,6 @@ def process():
             counter += 1
     nbrOfLabeled = len([i for i in range(0,len(data)) if humanLabels[data[i][ID]] != UNLABELED])
 
-    return(render_template('template.html', data=data, labels=labels, fieldsShow=fieldsShow , human=human, selected=selected, nbrOfSelected=nbrOfSelected, nbrOfLabeled=nbrOfLabeled, humanLabels=humanLabels, page=page, minPage=minPage, maxPage=maxPage, pageSize=pageSize, URL=URL, username=username, fieldsStatus=fieldsStatus, fileNames=fileNames, fileName=fileName, helpText=helpText, query=query))
+    return(render_template('template-nl.html', data=data, labels=labels, fieldsShow=fieldsShow , human=human, selected=selected, nbrOfSelected=nbrOfSelected, nbrOfLabeled=nbrOfLabeled, humanLabels=humanLabels, page=page, minPage=minPage, maxPage=maxPage, pageSize=pageSize, URL=URL, username=username, fieldsStatus=fieldsStatus, fileNames=fileNames, fileName=fileName, helpText=helpText, query=query))
 
 app.secret_key = "PLEASEREPLACETHIS"

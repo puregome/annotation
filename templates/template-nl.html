@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Tweets</title>
+</head>
+<body>
+    {% set fieldsOrder = ["Label","Id","User","Tweet"] %}
+    {% set pageSizes = ["10","20","50","100"] %}
+    <p>
+    <form action="{{ URL }}" method="post">
+    <strong>Bestand</strong>:
+    <select name="fileName" onchange="this.form.submit()">
+        {% for f in fileNames %}
+            <option value="{{ f }}" 
+            {% if f == fileName %} 
+            selected 
+            {% endif %}
+            >{{ f }}</option>
+        {% endfor %}
+    </select>
+    <strong>Label</strong>:
+    <select name="human" onchange="this.form.submit()">
+        <option value=""></option>
+        {% for l in labels|dictsort(false,'value') %}
+            {% if l[1] != "ERROR" %}
+                <option value="{{ l[1] }}" 
+                {% if l[1] == human %} 
+                selected 
+                {% endif %}
+                >{{ l[1] }}</option>
+            {% endif %}
+        {% endfor %}
+    </select>
+    <strong>Veld</strong>:
+    <select name="fields" onchange="this.form.submit()">
+        <option value=""></option>
+        {% for key in fieldsOrder %}
+	<option value="{{ key }}">
+            {% if fieldsShow[key] %}
+            ZICHTBAAR
+	    {% else %}
+	    ONZICHTBAAR
+            {% endif %}
+            {{ key }}</option>
+        {% endfor %}
+    </select>
+    <input type="hidden" name="fieldsStatus" id="fieldsStatus" value="{{ fieldsStatus }}" />
+    <input type="hidden" name="lastFileName" id="lastFileName" value="{{ fileName }}" />
+    <input type="hidden" name="lastQuery" id="lastQuery" value="{{ query }}" />
+    <strong>Pagina</strong>:
+    <input type="text" id="page" name="page" size="2" value="{{ page }}" onchange="this.form.submit()">
+    <strong>Tweets per pagina</strong>:
+    <select name="size" onchange="this.form.submit()">
+        {% for key in pageSizes %}
+        <option value="{{ key }}"
+	{% if key|int == pageSize|int %}
+	selected
+	{% endif %}
+	>{{ key }}</option>
+        {% endfor %}
+    </select>
+    <strong>Zoek</strong>:
+    <input type="text" id="query" name="query" size="10" value="{{query }}" onchange="this.form.submit()">
+    <strong>Gebruiker</strong>: {{ username }}
+    (<a href="{{ URL }}?logout">logout</a>)
+    <p>
+    <hr>
+    Gevonden: {{ nbrOfSelected }} teksten ({{ nbrOfLabeled }} gelabeld).
+    Pagina:
+    {% for p in range(minPage,maxPage+1) %}
+	{% if p == page %}
+	<strong>{{ p }}</strong>
+	{% else %}
+	<a href="{{ URL }}/?page={{ p }}&fileName={{ fileName }}&human={{ human }}&pageSize={{ pageSize }}&fieldsStatus={{ fieldsStatus }}&query={{ query }}&lastQuery={{ query }}">{{ p }}</a>
+	{% endif %}
+	{% endfor %}
+    {% if nbrOfSelected > 0 %}
+    <hr>
+    <div id="helpTextDiv">{{ helpText }}<hr></div>
+    <noscript><font color="red">WAARSCHUWING: JAVASCRIPT STAAT UIT: NIEUWE ANNOTATIES WORDEN NIET OPGESLAGEN!</font><hr></noscript>
+    <p>
+    <font size="3">
+    <table>
+        <tr>
+	    <th align="left"></th>
+	{% for key in fieldsOrder %}
+	    {% if fieldsShow[key] %}
+	    <th align="left">{{ key }}</th>
+	    {% endif %}
+	{% endfor %}
+	</tr>
+    {% set index = [] %}
+    {% for item in data %}
+        {% if loop.index0 in selected %}
+        {% set key = loop.index0 %}
+        {% set __ = index.append(1) %}
+        <tr>
+	    <td align="right" valign="top">{{ key+1 }}.</td>
+	    {% if fieldsShow["Label"] %}
+	    <td valign="top">
+	       <select name="data{{ index|length }}" onchange="this.form.submit()">
+		       <option value="{{ key ~ " " }}"></option>
+	       {% for l in labels|dictsort(false,'value') %}
+	       {% if l[1] != "ERROR" %}
+	       <option value="{{ key ~ " " ~ l[1] }}"
+	       {% if humanLabels[data[key]["id"]] == l[1] %}
+	       selected
+	       {% endif %}
+		>{{ l[1] }}</option>
+	       {% endif %}
+	       {% endfor %}
+	       </select>
+	    </td>
+	    {% endif %}
+	    {% if fieldsShow["Id"] %}
+	    <td valign="top"><a href="https://twitter.com/user/status/{{ item["id"] }}">{{ item["id"] }}</a></td>
+	    {% endif %}
+	    {% if fieldsShow["User"] %}
+	    <td valign="top"><a href="https://twitter.com/{{ item["name"] }}">{{ item["name"] }}</a></td>
+	    {% endif %}
+	    {% if fieldsShow["Tweet"] %}
+	    <td valign="top">{{ item["text"] }}</td>
+	    {% endif %}
+	</tr>
+        {% endif %}
+    {% endfor %}
+    </table>
+    </font>
+    <hr>
+    Gevonden: {{ nbrOfSelected }} teksten ({{ nbrOfLabeled }} gelabeld).
+    Pagina:
+    {% for p in range(minPage,maxPage+1) %}
+	{% if p == page %}
+	<strong>{{ p }}</strong>
+	{% else %}
+	<a href="{{ URL }}/?page={{ p }}&fileName={{ fileName }}&human={{ human }}&pageSize={{ pageSize }}&fieldsStatus={{ fieldsStatus }}&query={{ query }}&lastQuery={{ query }}">{{ p }}</a>
+	{% endif %}
+    {% endfor %}
+    <hr>
+    {% endif %}
+    </form>
+</body>
+</html>
