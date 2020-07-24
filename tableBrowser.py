@@ -25,6 +25,7 @@ BASEDIR = "/home/cloud/projects/puregome/annotation/"
 DATADIR = BASEDIR+"data/"
 HUMANLABELFILE = "human-labels.txt"
 USERFILE = "users.txt"
+REGISTERFILE = "register.txt"
 LOGFILE = "logfile"
 LABELFILE = "LABELS.txt"
 BORDERPAGES = 4
@@ -43,6 +44,12 @@ NAME = "user"
 CSVSUFFIX = r".csv$"
 TWEETS = "tweets"
 HELPFILE = "help.txt"
+TOTAL = "total"
+ACCURACY = "accuracy"
+ANONYMOUS = "anonymous"
+UNKNOWNUSER = "unknown user"
+NBROFTESTCASES = 100
+WEBMASTERMAIL = "erikt@xs4all.nl"
 
 app = Flask(__name__)
 data = []
@@ -96,7 +103,8 @@ def readData(inFileName,query=""):
         data = sorted(data,key=lambda k:k[TEXT])
     return(data,humanLabels)
 
-def readHumanLabels(fileName,humanLabels):
+def readHumanLabels(fileName,humanLabelsIn,targetUserName=""):
+    humanLabelsOut = dict(humanLabelsIn)
     inFile = open(DATADIR+fileName+"."+HUMANLABELFILE,"r",encoding="utf-8")
     for line in inFile:
         fields = line.rstrip().split()
@@ -105,10 +113,11 @@ def readHumanLabels(fileName,humanLabels):
         tweetId = fields.pop(0)
         index = int(fields.pop(0))
         label = " ".join(fields)
-        if "username" in session and username == session["username"]:
-            humanLabels[tweetId] = label
+        if (targetUserName != "" and username == targetUserName) or \
+           (targetUserName == "" and "username" in session and username == session["username"]):
+            humanLabelsOut[tweetId] = label
     inFile.close()
-    return(humanLabels)
+    return(humanLabelsOut)
 
 def readUsers():
     users = {}
@@ -126,6 +135,18 @@ def writeUsers(users):
     for username in users:
         print(":".join([username,users[username]]),file=outFile)    
     outFile.close()
+
+def writeRegisterFile(email,password):
+    outFile = open(DATADIR+REGISTERFILE,"a",encoding="utf-8")
+    print(email,password,file=outFile)
+    outFile.close()
+
+def readRegisterFile():
+    inFile = open(DATADIR+REGISTERFILE,"r",encoding="utf-8")
+    text = ""
+    for line in inFile: text += line
+    inFile.close()
+    return(text)
 
 def storeHumanLabel(fileName,index,label,username):
     global data,humanLabels
@@ -201,11 +222,12 @@ def register():
         username = formdata["email"].lower()
         users = readUsers()
         if username in users:
-           return(render_template("register.html", message="Email address "+username+" is already used, choose another address",success=""))
+           return(render_template("register.html", message="E-mailadres "+username+" wordt al gebruikt, kies een ander adres",success=""))
         password = makePassword()
         users[username] = encode(password)
         writeUsers(users)
-        return(render_template("register.html", message="An account has been created for email address "+username+" with password: "+password,success="yes"))
+        writeRegisterFile(username,password)
+        return(render_template("register.html", message=f"Bedankt! Een account is aangemaakt voor emailadres {username}. U ontvangt binnen 24 uur het wachtwoord. Mail anders {WEBMASTERMAIL} voor meer informatie.",success="yes"))
     else:
         return(render_template('register.html', message="", success=""))
 
@@ -231,7 +253,70 @@ def getFileNames():
     dataFiles = []
     for fileName in allFiles:
         if re.search(CSVSUFFIX,fileName): dataFiles.append(fileName)
-    return(dataFiles)   
+    return(dataFiles)
+
+def anonymize(users,userName):
+    if userName == session["username"]: return(userName)
+    counter = 0
+    for un in users:
+        counter += 1
+        if un == userName: return(ANONYMOUS+str(counter))
+    return(UNKNOWNUSER)
+
+def findId(data,tweetId):
+    for i in range(0,len(data)):
+        if data[i][ID] == tweetId: return(i)
+    return()
+
+@app.route("/overview",methods=["GET","POST"])
+def overview():
+    global data,humanLabels
+
+    if not "username" in session: return(redirect(URL+"login"))
+    username = session["username"]
+    fileNames = getFileNames()
+    fileName = fileNames[0]
+    users = readUsers()
+    if request.method == "GET": formdata = request.args
+    elif request.method == "POST": formdata = request.form
+    for key in formdata:
+        if key == "fileName" and formdata["fileName"] in fileNames:
+            fileName = formdata["fileName"]
+    data, humanLabels = readData(fileName)
+    labels = readLabels(fileName)
+    mainUserName = list(users.keys())[0]
+    mainUserLabels = readHumanLabels(fileName,humanLabels,targetUserName=mainUserName)
+    scores = {}
+    suggestions  = []
+    for un in users:
+        total = {"":0}
+        correct = {"":0}
+        userLabels = readHumanLabels(fileName,humanLabels,targetUserName=un)
+        for tweetId in userLabels:
+            label = userLabels[tweetId]
+            if label != UNLABELED and tweetId in mainUserLabels:
+                total[""] += 1
+                if not label in total:
+                    total[label] = 0
+                    correct[label] = 0
+                total[label] += 1
+                if label == mainUserLabels[tweetId]: 
+                    correct[""] += 1
+                    correct[label] += 1
+                elif total[""] <= NBROFTESTCASES and un == session["username"]:
+                    suggestions.append((mainUserLabels[tweetId],label,data[findId(data,tweetId)][TEXT]))
+        if total[""] > 0: 
+            accuracies = {}
+            for label in total: 
+                accuracies[label] = round(100*correct[label]/total[label])
+            if total[""] >= NBROFTESTCASES:
+                scores[anonymize(users,un)] = {TOTAL:total,ACCURACY:accuracies}
+            else:
+               scores[anonymize(users,un)] = {TOTAL:total,ACCURACY:{}}
+    scores = {key:scores[key] for key in sorted(scores.keys(),key=lambda k:scores[k][TOTAL][""],reverse=True)}
+    if total[""] < NBROFTESTCASES: suggestions = {}
+    if ANONYMOUS+"1" in scores: del(scores[ANONYMOUS+"1"]) 
+    return(render_template('overview.html',URL=URL,username=username,fileNames=fileNames,fileName=fileName,labels=labels,scores=scores,suggestions=suggestions))
 
 @app.route('/',methods=['GET','POST'])
 def process():
@@ -307,7 +392,8 @@ def process():
                counter < pageSize*page: selected[d] = True 
             counter += 1
     nbrOfLabeled = len([i for i in range(0,len(data)) if humanLabels[data[i][ID]] != UNLABELED])
-
+    if len(readRegisterFile()) > 0 and username == WEBMASTERMAIL:
+        helpText = "ALERT: NEW REGISTERED USERS!"
     return(render_template('template-nl.html', data=data, labels=labels, fieldsShow=fieldsShow , human=human, selected=selected, nbrOfSelected=nbrOfSelected, nbrOfLabeled=nbrOfLabeled, humanLabels=humanLabels, page=page, minPage=minPage, maxPage=maxPage, pageSize=pageSize, URL=URL, username=username, fieldsStatus=fieldsStatus, fileNames=fileNames, fileName=fileName, helpText=helpText, query=query))
 
 app.secret_key = "PLEASEREPLACETHIS"
