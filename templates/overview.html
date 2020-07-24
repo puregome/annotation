@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Tweets</title>
+</head>
+<body>
+    <p>
+    <form action="{{ URL+"overview" }}" method="post">
+    <strong>Bestand</strong>:
+    <select name="fileName" onchange="this.form.submit()">
+        {% for f in fileNames %}
+            <option value="{{ f }}" 
+            {% if f == fileName %} 
+            selected 
+            {% endif %}
+            >{{ f }}</option>
+        {% endfor %}
+    </select>
+    <strong>Gebruiker</strong>: {{ username }}
+    (<a href="{{ URL }}?logout">logout</a>)
+    (terug naar <a href="{{ URL }}">annoteren</a>)
+    </form>
+    <p>
+    <table>
+    <tr><th style="text-align:left">Annotator</th><th style="text-align:center">Totaal</th><th style="text-align:center">Correct</th>
+    {% for label in labels %}
+        <th style="text-align:center">{{ labels[label] }}</th>
+    {% endfor %}
+    </tr>
+    {% for key in scores %}
+        <tr><td style="text-align:left">{{ key }}</td>
+            <td style="text-align:center">{{ scores[key]["total"][""]}}</td>
+            {% if "" in scores[key]["accuracy"] %}
+                <td style="text-align:center">{{ scores[key]["accuracy"][""] }}%</td>
+            {% else %}
+                <td style="text-align:center">-</td>
+            {% endif %}
+            {% for label in labels %}
+                {% if labels[label] in scores[key]["accuracy"] %}
+                    <td style="text-align:center">{{ scores[key]["accuracy"][labels[label]] }}%</td>
+                {% else %}
+                    <td style="text-align:center">-</td>
+                {% endif %}
+            {% endfor %}
+        </tr>
+    {% endfor %}
+    </table>
+    {% if suggestions %}
+    <p>
+    Suggesties voor alternatieve labels in de eerste honderd tweets:
+    <ul>
+    {% for s in suggestions %}
+        <li><font style="color:green">{{ s[0] }}</font> (nu: <font style="color:red">{{ s[1] }}</font>) {{ s[2] }}
+    {% endfor %}
+    </ul>
+    {% endif %}
+<p>
+Terug naar <a href="{{ URL }}">annoteren</a>
+</body>
+</html>
