@@ -1,9 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Login</title>
+    <title>Inloggen</title>
 </head>
 <body>
+    <a href="login">Inloggen</a> |
+    <a href="register">Registreren</a>
+    <h1>Inloggen</h1>
     {% if message != "" %}
     <p>
     <font style="color:red;">{{ message }}</font>
@@ -11,13 +14,13 @@
     <p>
     <form action="{{ URL }}" method="post">
     <table>
-    <tr><td><strong>User Name</strong>:</td>
+    <tr><td><strong>E-mailadres</strong>:</td>
         <td><input type="text" name="username" id="username" size="30"/></td>
     </tr>
-    <tr><td><strong>Password</strong>:</td>
+    <tr><td><strong>Wachtwoord</strong>:</td>
 	<td><input type="password" name="password" id="password" size="30"/></td>
     </tr>
-    <tr><td><input type="submit" value="Submit"/></td></tr>
+    <tr><td><input type="submit" value="Versturen"/></td></tr>
     </table>
     </form>
 </body>
