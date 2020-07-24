@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Registreren</title>
+</head>
+<body>
+    <a href="login">Inloggen</a> |
+    <a href="register">Registreren</a>
+    <h1>Registreren</h1>
+    {% if message != "" %}
+        <p>
+        <font style="color:red;">{{ message }}</font>
+    {% endif %}
+    {% if success == "" %}
+        <p>
+        <form action="{{ URL }}" method="post">
+        <table>
+        <tr><td><strong>E-mailadres</strong>:</td>
+        <td><input type="text" name="email" id="email" size="30"/></td>
+        </tr>
+        <tr><td><input type="submit" value="Versturen"/></td></tr>
+        </table>
+        </form>
+    {% endif %}
+</body>
+</html>
