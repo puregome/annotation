@@ -50,10 +50,27 @@
     Suggesties voor alternatieve labels in de eerste honderd tweets:
     <ul>
     {% for s in suggestions %}
-        <li><font style="color:green">{{ s[0] }}</font> (nu: <font style="color:red">{{ s[1] }}</font>) {{ s[2] }}
+        <li><font style="color:green">{{ s[0] }}</font> (nu: <font style="color:red">{{ s[1] }}</font>) [{{ s[3] }}.] {{ s[2] }}
     {% endfor %}
     </ul>
     {% endif %}
+{% if confusionMatrix|length > 0 %}
+    <p>
+    Confusionmatrix: rijen geven de gouden standaard aan en kolommen uw labels
+    <table>
+    <tr><td></td>
+        {% for label in labels %}
+            <td>{{ labels[label] }}</td>
+        {% endfor %}
+        {% for i in range(0,confusionMatrix|length) %}
+    <tr><td>{{ labels["" ~ i] }}</td>
+            {% for val in confusionMatrix[i] %}
+                <td align="center">{{ val }}</td>
+            {% endfor %}
+    </tr>
+        {% endfor %}
+    </table>
+{% endif %}
 <p>
 Terug naar <a href="{{ URL }}">annoteren</a>
 </body>
