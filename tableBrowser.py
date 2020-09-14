@@ -9,6 +9,7 @@ from flask import request
 from flask import redirect
 from flask import session
 from wtforms import Form, StringField, SelectField, PasswordField, validators
+from sklearn.metrics import confusion_matrix
 import csv
 import datetime
 import hashlib
@@ -96,12 +97,22 @@ def readData(inFileName,query=""):
             row[ID] = row[IDSTR]
         if not row[TEXT] in seen and (query == "" or re.search(query,row[TEXT],flags=re.IGNORECASE)):
             data.append(row)
-            humanLabels[row[ID]] = UNLABELED
+            humanLabels[row[ID]] = (UNLABELED,0)
             seen[row[TEXT]] = True
     inFile.close()
     if re.search(TWEETS,inFileName):
         data = sorted(data,key=lambda k:k[TEXT])
     return(data,humanLabels)
+
+def getFirstAnnotator(fileName):
+    username = ""
+    inFile = open(DATADIR+fileName+"."+HUMANLABELFILE,"r",encoding="utf-8")
+    for line in inFile:
+        fields = line.rstrip().split()
+        username = fields.pop(0)
+        break
+    inFile.close()
+    return(username)
 
 def readHumanLabels(fileName,humanLabelsIn,targetUserName=""):
     humanLabelsOut = dict(humanLabelsIn)
@@ -115,7 +126,7 @@ def readHumanLabels(fileName,humanLabelsIn,targetUserName=""):
         label = " ".join(fields)
         if (targetUserName != "" and username == targetUserName) or \
            (targetUserName == "" and "username" in session and username == session["username"]):
-            humanLabelsOut[tweetId] = label
+            humanLabelsOut[tweetId] = (label,index)
     inFile.close()
     return(humanLabelsOut)
 
@@ -155,7 +166,7 @@ def storeHumanLabel(fileName,index,label,username):
         log("warning: refusing to store empty label: "+str(index)+"#"+str(label)+"#"+str(username))
         return()
     tweetId = data[index][ID]
-    humanLabels[tweetId] = label
+    humanLabels[tweetId] = (label,index)
     date = datetime.datetime.today().strftime("%Y%m%d%H%M%S")
     outFile = open(DATADIR+fileName+"."+HUMANLABELFILE,"a",encoding="utf-8")
     outFile.write(username+" "+date+" "+tweetId+" "+str(index)+" "+label+"\n")
@@ -167,7 +178,7 @@ def generalize(fileName,index,label,username):
 
     text = data[index][TEXT]
     for i in range(0,len(data)):
-        if data[i][TEXT] == text and humanLabels[data[i][ID]] != label:
+        if data[i][TEXT] == text and humanLabels[data[i][ID]][0] != label:
             storeHumanLabel(fileName,i,label,username)
     return()
 
@@ -284,27 +295,32 @@ def overview():
             fileName = formdata["fileName"]
     data, humanLabels = readData(fileName)
     labels = readLabels(fileName)
-    mainUserName = list(users.keys())[0]
+    mainUserName = getFirstAnnotator(fileName)
     mainUserLabels = readHumanLabels(fileName,humanLabels,targetUserName=mainUserName)
     scores = {}
     suggestions  = []
+    confusionMatrix = []
     for un in users:
         total = {"":0}
         correct = {"":0}
         userLabels = readHumanLabels(fileName,humanLabels,targetUserName=un)
+        comparisonLabels = []
         for tweetId in userLabels:
-            label = userLabels[tweetId]
+            label = userLabels[tweetId][0]
+            if label == "NEUTRAL" or label == "NOTCLEAR": label = "IRRELEVANT"
             if label != UNLABELED and tweetId in mainUserLabels:
                 total[""] += 1
                 if not label in total:
                     total[label] = 0
                     correct[label] = 0
                 total[label] += 1
-                if label == mainUserLabels[tweetId]: 
+                if label == mainUserLabels[tweetId][0]: 
                     correct[""] += 1
                     correct[label] += 1
-                elif total[""] <= NBROFTESTCASES and un == session["username"]:
-                    suggestions.append((mainUserLabels[tweetId],label,data[findId(data,tweetId)][TEXT]))
+                elif total[""] <= NBROFTESTCASES and un == username:
+                    suggestions.append((mainUserLabels[tweetId][0],label,data[findId(data,tweetId)][TEXT],1+mainUserLabels[tweetId][1]))
+                if un == username:
+                    comparisonLabels.append((mainUserLabels[tweetId][0],label))
         if total[""] > 0: 
             accuracies = {}
             for label in total: 
@@ -313,10 +329,16 @@ def overview():
                 scores[anonymize(users,un)] = {TOTAL:total,ACCURACY:accuracies}
             else:
                scores[anonymize(users,un)] = {TOTAL:total,ACCURACY:{}}
+        if un == username:
+            if total[""] < NBROFTESTCASES: suggestions = {}
+            if len(comparisonLabels) > 0:
+                confusionMatrix = confusion_matrix([x[0] for x in comparisonLabels],[x[1] for x in comparisonLabels],labels=list(labels.values()))
     scores = {key:scores[key] for key in sorted(scores.keys(),key=lambda k:scores[k][TOTAL][""],reverse=True)}
-    if total[""] < NBROFTESTCASES: suggestions = {}
-    if ANONYMOUS+"1" in scores: del(scores[ANONYMOUS+"1"]) 
-    return(render_template('overview.html',URL=URL,username=username,fileNames=fileNames,fileName=fileName,labels=labels,scores=scores,suggestions=suggestions))
+    outFile = open("/tmp/xxx","w")
+    print(total[""],len(mainUserLabels),file=outFile)
+    outFile.close()
+    if ANONYMOUS+"1" in scores: del(scores[ANONYMOUS+"1"])
+    return(render_template('overview.html',URL=URL,username=username,fileNames=fileNames,fileName=fileName,labels=labels,scores=scores,suggestions=suggestions,confusionMatrix=confusionMatrix))
 
 @app.route('/',methods=['GET','POST'])
 def process():
@@ -375,23 +397,23 @@ def process():
                     fields = formdata[key].split()
                     index = int(fields.pop(0))
                     label = " ".join(fields)
-                    if humanLabels[data[index][ID]] != label:
+                    if humanLabels[data[index][ID]][0] != label:
                         storeHumanLabel(fileName,index,label,username)
                         generalize(fileName,index,label,username)
     if changeFieldsStatus != "":
         fieldsShow[changeFieldsStatus] = not fieldsShow[changeFieldsStatus]
         fieldsStatus = getFieldsStatus(fieldsShow)
     for d in range(0,len(data)):
-        if select(human,humanLabels[data[d][ID]]):
+        if select(human,humanLabels[data[d][ID]][0]):
             nbrOfSelected += 1
     page, minPage, maxPage = computePageBoundaries(nbrOfSelected,page,pageSize)
     counter = 0
     for d in range(0,len(data)):
-        if select(human,humanLabels[data[d][ID]]):
+        if select(human,humanLabels[data[d][ID]][0]):
             if counter >= pageSize*(page-1) and \
                counter < pageSize*page: selected[d] = True 
             counter += 1
-    nbrOfLabeled = len([i for i in range(0,len(data)) if humanLabels[data[i][ID]] != UNLABELED])
+    nbrOfLabeled = len([i for i in range(0,len(data)) if humanLabels[data[i][ID]][0] != UNLABELED])
     if len(readRegisterFile()) > 0 and username == WEBMASTERMAIL:
         helpText = "ALERT: NEW REGISTERED USERS!"
     return(render_template('template-nl.html', data=data, labels=labels, fieldsShow=fieldsShow , human=human, selected=selected, nbrOfSelected=nbrOfSelected, nbrOfLabeled=nbrOfLabeled, humanLabels=humanLabels, page=page, minPage=minPage, maxPage=maxPage, pageSize=pageSize, URL=URL, username=username, fieldsStatus=fieldsStatus, fileNames=fileNames, fileName=fileName, helpText=helpText, query=query))
