@@ -119,9 +119,17 @@
 	    {% if fieldsShow["User"] %}
 	    <td valign="top"><a href="https://twitter.com/{{ item["name"] }}">{{ item["name"] }}</a></td>
 	    {% endif %}
-	    {% if fieldsShow["Tweet"] %}
-	    <td valign="top">{{ item["text"] }}</td>
-	    {% endif %}
+            {% if fieldsShow["Tweet"] %}
+                <td valign="top">
+                {% for t in range(0,item["text"]["text"]|length) %}
+                    {% if item["text"]["type"][t] == "text" %}
+                        {{ item["text"]["text"][t] }}
+                    {% else %}
+                        <font color="#CCCCCC">{{ item["text"]["text"][t] }}</font>
+                    {% endif %}
+                {% endfor %}
+                </td>
+            {% endif %}
 	</tr>
         {% endif %}
     {% endfor %}
