@@ -39,6 +39,8 @@ nbrOfItems = 0
 TEXTCOLUMNID = 2
 IDCOLUMNID = 0
 TEXT = "text"
+INCLUDED = "included"
+TYPE = "type"
 ID = "id"
 IDSTR = "id_str"
 NAME = "user"
@@ -80,6 +82,37 @@ def readHelpText(inFileName):
     inFile.close()
     return(helpText)
 
+def splitText(text):
+    thisDict = {TEXT:[],TYPE:[]}
+    if re.search(r">",text):
+        startChar = 0
+        for i in range(0,len(text)):
+            if text[i] == ">":
+                for j in range(i+1,len(text)):
+                    if text[j] == "[" and text[j-1:j+10] == " [NL] [NL] ":
+                        if i > startChar:
+                            thisDict[TEXT].append(text[startChar:i])
+                            thisDict[TYPE].append(TEXT)
+                        thisDict[TEXT].append(text[i:j+10])
+                        thisDict[TYPE].append(INCLUDED)
+                        startChar = j+10
+                        break
+                if startChar <= i:
+                    if i > startChar:
+                        thisDict[TEXT].append(text[startChar:i])
+                        thisDict[TYPE].append(TEXT)
+                    thisDict[TEXT].append(text[i:])
+                    thisDict[TYPE].append(INCLUDED)
+                    startChar = len(text)
+                i = startChar
+        if startChar < len(text):
+            thisDict[TEXT].append(text[startChar:])
+            thisDict[TYPE].append(TEXT)
+        return(thisDict)
+    thisDict[TEXT].append(text)
+    thisDict[TYPE].append(TEXT)
+    return(thisDict)
+
 def readData(inFileName,query=""):
     data = []
     humanLabels = {}
@@ -93,12 +126,15 @@ def readData(inFileName,query=""):
         row[TEXT] = re.sub(r"https*://\S+"," ",row[TEXT])
         row[TEXT] = re.sub(r"\s+"," ",row[TEXT])
         row[TEXT] = row[TEXT].strip()
+        rowText = row[TEXT]
+        row[TEXT] = splitText(row[TEXT])
+        # row[TEXT] = re.sub(r"(>[^[]*\[NL\] \[NL\])",r'<font color="#888888">\1</font>',row[TEXT])
         if IDSTR in row and not ID in row:
             row[ID] = row[IDSTR]
-        if not row[TEXT] in seen and (query == "" or re.search(query,row[TEXT],flags=re.IGNORECASE)):
+        if not rowText in seen and (query == "" or re.search(query,row[TEXT],flags=re.IGNORECASE)):
             data.append(row)
             humanLabels[row[ID]] = (UNLABELED,0)
-            seen[row[TEXT]] = True
+            seen[rowText] = True
     inFile.close()
     if re.search(TWEETS,inFileName):
         data = sorted(data,key=lambda k:k[TEXT])
@@ -331,13 +367,12 @@ def overview():
                scores[anonymize(users,un)] = {TOTAL:total,ACCURACY:{}}
         if un == username:
             if total[""] < NBROFTESTCASES: suggestions = {}
-            if len(comparisonLabels) > 0:
+            if len(comparisonLabels) >= NBROFTESTCASES:
                 confusionMatrix = confusion_matrix([x[0] for x in comparisonLabels],[x[1] for x in comparisonLabels],labels=list(labels.values()))
     scores = {key:scores[key] for key in sorted(scores.keys(),key=lambda k:scores[k][TOTAL][""],reverse=True)}
     outFile = open("/tmp/xxx","w")
     print(total[""],len(mainUserLabels),file=outFile)
     outFile.close()
-    if ANONYMOUS+"1" in scores: del(scores[ANONYMOUS+"1"])
     return(render_template('overview.html',URL=URL,username=username,fileNames=fileNames,fileName=fileName,labels=labels,scores=scores,suggestions=suggestions,confusionMatrix=confusionMatrix))
 
 @app.route('/',methods=['GET','POST'])
