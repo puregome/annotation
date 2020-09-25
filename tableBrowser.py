@@ -53,6 +53,7 @@ ANONYMOUS = "anonymous"
 UNKNOWNUSER = "unknown user"
 NBROFTESTCASES = 100
 WEBMASTERMAIL = "erikt@xs4all.nl"
+MAINUSER = "mainUser"
 
 app = Flask(__name__)
 data = []
@@ -310,6 +311,12 @@ def anonymize(users,userName):
         if un == userName: return(ANONYMOUS+str(counter))
     return(UNKNOWNUSER)
 
+def anonymizeAllUsers(users):
+    anonymizedUsers = {}
+    for user in users:
+        anonymizedUsers[anonymize(users,user)] = user
+    return(anonymizedUsers)
+
 def findId(data,tweetId):
     for i in range(0,len(data)):
         if data[i][ID] == tweetId: return(i)
@@ -324,6 +331,7 @@ def overview():
     fileNames = getFileNames()
     fileName = fileNames[0]
     users = readUsers()
+    anonymizedUsers = anonymizeAllUsers(users)
     if request.method == "GET": formdata = request.args
     elif request.method == "POST": formdata = request.form
     for key in formdata:
@@ -331,40 +339,48 @@ def overview():
             fileName = formdata["fileName"]
     data, humanLabels = readData(fileName)
     labels = readLabels(fileName)
-    mainUserName = getFirstAnnotator(fileName)
+    if MAINUSER in formdata and formdata[MAINUSER] in anonymizedUsers:
+        mainUserName = anonymizedUsers[formdata[MAINUSER]]
+    else:
+        mainUserName = getFirstAnnotator(fileName)
     mainUserLabels = readHumanLabels(fileName,humanLabels,targetUserName=mainUserName)
     scores = {}
     suggestions  = []
     confusionMatrix = []
     for un in users:
         total = {"":0}
+        totalIncludingNonMainUser = 0
         correct = {"":0}
         userLabels = readHumanLabels(fileName,humanLabels,targetUserName=un)
         comparisonLabels = []
         for tweetId in userLabels:
             label = userLabels[tweetId][0]
             if label == "NEUTRAL" or label == "NOTCLEAR": label = "IRRELEVANT"
-            if label != UNLABELED and tweetId in mainUserLabels:
-                total[""] += 1
-                if not label in total:
-                    total[label] = 0
-                    correct[label] = 0
-                total[label] += 1
-                if label == mainUserLabels[tweetId][0]: 
-                    correct[""] += 1
-                    correct[label] += 1
-                elif total[""] <= NBROFTESTCASES and un == username:
-                    suggestions.append((mainUserLabels[tweetId][0],label,data[findId(data,tweetId)][TEXT],1+mainUserLabels[tweetId][1]))
-                if un == username:
-                    comparisonLabels.append((mainUserLabels[tweetId][0],label))
+            if label != UNLABELED:
+                totalIncludingNonMainUser += 1
+                if tweetId in mainUserLabels and mainUserLabels[tweetId][0] != UNLABELED:
+                    total[""] += 1
+                    if not label in total:
+                        total[label] = 0
+                        correct[label] = 0
+                    total[label] += 1
+                    if label == mainUserLabels[tweetId][0]: 
+                        correct[""] += 1
+                        correct[label] += 1
+                    elif total[""] <= NBROFTESTCASES and un == username:
+                        suggestions.append((mainUserLabels[tweetId][0],label,data[findId(data,tweetId)][TEXT],1+mainUserLabels[tweetId][1]))
+                    if un == username:
+                        comparisonLabels.append((mainUserLabels[tweetId][0],label))
         if total[""] > 0: 
             accuracies = {}
             for label in total: 
                 accuracies[label] = round(100*correct[label]/total[label])
             if total[""] >= NBROFTESTCASES:
+                total[""] = totalIncludingNonMainUser
                 scores[anonymize(users,un)] = {TOTAL:total,ACCURACY:accuracies}
             else:
-               scores[anonymize(users,un)] = {TOTAL:total,ACCURACY:{}}
+                total[""] = totalIncludingNonMainUser
+                scores[anonymize(users,un)] = {TOTAL:total,ACCURACY:{}}
         if un == username:
             if total[""] < NBROFTESTCASES: suggestions = {}
             if len(comparisonLabels) >= NBROFTESTCASES:
@@ -373,7 +389,7 @@ def overview():
     outFile = open("/tmp/xxx","w")
     print(total[""],len(mainUserLabels),file=outFile)
     outFile.close()
-    return(render_template('overview.html',URL=URL,username=username,fileNames=fileNames,fileName=fileName,labels=labels,scores=scores,suggestions=suggestions,confusionMatrix=confusionMatrix))
+    return(render_template('overview.html',URL=URL,username=username,fileNames=fileNames,fileName=fileName,labels=labels,scores=scores,suggestions=suggestions,confusionMatrix=confusionMatrix,text=""))
 
 @app.route('/',methods=['GET','POST'])
 def process():

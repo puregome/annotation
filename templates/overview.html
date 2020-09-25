@@ -5,6 +5,7 @@
 </head>
 <body>
     <p>
+    {{ text }}
     <form action="{{ URL+"overview" }}" method="post">
     <strong>Bestand</strong>:
     <select name="fileName" onchange="this.form.submit()">
@@ -42,6 +43,9 @@
                     <td style="text-align:center">-</td>
                 {% endif %}
             {% endfor %}
+            <td style="text-align:left">
+                <a href="{{ URL }}overview?fileName={{fileName}}&mainUser={{ key }}">Compare with {{ key }}</a>
+            </td>
         </tr>
     {% endfor %}
     </table>
@@ -50,7 +54,14 @@
     Suggesties voor alternatieve labels in de eerste honderd tweets:
     <ul>
     {% for s in suggestions %}
-        <li><font style="color:green">{{ s[0] }}</font> (nu: <font style="color:red">{{ s[1] }}</font>) [{{ s[3] }}.] {{ s[2] }}
+        <li><font style="color:green">{{ s[0] }}</font> (nu: <font style="color:red">{{ s[1] }}</font>) [{{ s[3] }}.]
+        {% for t in range(0,s[2]["text"]|length) %}
+            {% if s[2]["type"][t] == "text" %}
+                {{ s[2]["text"][t] }}
+            {% else %}
+                <font color="#CCCCCC">{{ s[2]["text"][t] }}</font>
+            {% endif %}
+        {% endfor %}
     {% endfor %}
     </ul>
     {% endif %}
