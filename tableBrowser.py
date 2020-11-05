@@ -138,7 +138,7 @@ def readData(inFileName,query=""):
             seen[rowText] = True
     inFile.close()
     if re.search(TWEETS,inFileName):
-        data = sorted(data,key=lambda k:k[TEXT])
+        data = [row for row in sorted(data,key=lambda k:" ".join(k[TEXT][TEXT]))]
     return(data,humanLabels)
 
 def getFirstAnnotator(fileName):
