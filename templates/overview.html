@@ -19,7 +19,7 @@
     </select>
     <strong>Gebruiker</strong>: {{ username }}
     (<a href="{{ URL }}?logout">logout</a>)
-    (terug naar <a href="{{ URL }}">annoteren</a>)
+    (terug naar <a href="{{URL}}?fileName={{fileName}}&page={{page}}&pageSize={{pageSize}}">annoteren</a>)
     </form>
     <p>
     <table>
@@ -49,10 +49,20 @@
         </tr>
     {% endfor %}
     </table>
-    {% if suggestions %}
+    {% if suggestions or suggestionsCritical %}
     <p>
     Suggesties voor alternatieve labels in de eerste honderd tweets:
     <ul>
+    {% for s in suggestionsCritical %}
+        <li><font style="color:green">{{ s[0] }}</font> (nu: <font style="color:red">{{ s[1] }}</font>) [{{ s[3] }}.]
+        {% for t in range(0,s[2]["text"]|length) %}
+            {% if s[2]["type"][t] == "text" %}
+                {{ s[2]["text"][t] }}
+            {% else %}
+                <font color="#CCCCCC">{{ s[2]["text"][t] }}</font>
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
     {% for s in suggestions %}
         <li><font style="color:green">{{ s[0] }}</font> (nu: <font style="color:red">{{ s[1] }}</font>) [{{ s[3] }}.]
         {% for t in range(0,s[2]["text"]|length) %}
@@ -83,6 +93,6 @@
     </table>
 {% endif %}
 <p>
-Terug naar <a href="{{ URL }}">annoteren</a>
+Terug naar <a href="{{URL}}?fileName={{fileName}}&page={{page}}&pageSize={{pageSize}}">annoteren</a>
 </body>
 </html>

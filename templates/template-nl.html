@@ -5,7 +5,7 @@
 </head>
 <body>
     {% set fieldsOrder = ["Label","Id","User","Tweet"] %}
-    {% set pageSizes = ["10","20","50","100"] %}
+    {% set pageSizes = ["5","10","20","50","100"] %}
     <p>
     <form action="{{ URL }}" method="post">
     <strong>Bestand</strong>:
@@ -75,7 +75,7 @@
 	{% endif %}
 	{% endfor %}
     {% if nbrOfSelected > 0 %}
-    | <a href="{{ URL+"overview?fileName="+fileName }}">Overzicht annotatoren</a>
+    | <a href="{{URL}}overview?fileName={{fileName}}&page={{page}}&pageSize={{pageSize}}">Overzicht annotatoren</a>
     <hr>
     <div id="helpTextDiv">{{ helpText }}<hr></div>
     <noscript><font color="red">WAARSCHUWING: JAVASCRIPT STAAT UIT: NIEUWE ANNOTATIES WORDEN NIET OPGESLAGEN!</font><hr></noscript>
@@ -145,7 +145,7 @@
 	<a href="{{ URL }}/?page={{ p }}&fileName={{ fileName }}&human={{ human }}&pageSize={{ pageSize }}&fieldsStatus={{ fieldsStatus }}&query={{ query }}&lastQuery={{ query }}">{{ p }}</a>
 	{% endif %}
     {% endfor %}
-    | <a href="{{ URL+"overview?fileName="+fileName }}">Overzicht annotatoren</a>
+    | <a href="{{URL}}overview?fileName={{fileName}}&page={{page}}&pageSize={{pageSize}}">Overzicht annotatoren</a>
     <hr>
     {% endif %}
     </form>

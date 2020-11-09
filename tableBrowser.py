@@ -332,11 +332,17 @@ def overview():
     fileName = fileNames[0]
     users = readUsers()
     anonymizedUsers = anonymizeAllUsers(users)
+    page = ""
+    pageSize = ""
     if request.method == "GET": formdata = request.args
     elif request.method == "POST": formdata = request.form
     for key in formdata:
         if key == "fileName" and formdata["fileName"] in fileNames:
             fileName = formdata["fileName"]
+        elif key == "page" and formdata["page"] != "":
+            page = int(formdata["page"])
+        elif key == "pageSize" and formdata["pageSize"] != "":
+            pageSize = int(formdata["pageSize"])
     data, humanLabels = readData(fileName)
     labels = readLabels(fileName)
     if MAINUSER in formdata and formdata[MAINUSER] in anonymizedUsers:
@@ -346,6 +352,7 @@ def overview():
     mainUserLabels = readHumanLabels(fileName,humanLabels,targetUserName=mainUserName)
     scores = {}
     suggestions  = []
+    suggestionsCritical  = []
     confusionMatrix = []
     for un in users:
         total = {"":0}
@@ -368,8 +375,11 @@ def overview():
                         correct[""] += 1
                         correct[label] += 1
                     elif total[""] <= NBROFTESTCASES and un == username:
-                        suggestions.append((mainUserLabels[tweetId][0],label,data[findId(data,tweetId)][TEXT],1+mainUserLabels[tweetId][1]))
-                    if un == username:
+                        if label != "ANDERS" and mainUserLabels[tweetId][0] != "ANDERS":
+                            suggestionsCritical.append((mainUserLabels[tweetId][0],label,data[findId(data,tweetId)][TEXT],1+mainUserLabels[tweetId][1]))
+                        else:
+                            suggestions.append((mainUserLabels[tweetId][0],label,data[findId(data,tweetId)][TEXT],1+mainUserLabels[tweetId][1]))
+                    if total[""] <= NBROFTESTCASES:
                         comparisonLabels.append((mainUserLabels[tweetId][0],label))
         if total[""] > 0: 
             accuracies = {}
@@ -382,14 +392,16 @@ def overview():
                 total[""] = totalIncludingNonMainUser
                 scores[anonymize(users,un)] = {TOTAL:total,ACCURACY:{}}
         if un == username:
-            if total[""] < NBROFTESTCASES: suggestions = {}
+            if total[""] < NBROFTESTCASES: 
+                suggestions = {}
+                suggestionsCritical = {}
             if len(comparisonLabels) >= NBROFTESTCASES:
                 confusionMatrix = confusion_matrix([x[0] for x in comparisonLabels],[x[1] for x in comparisonLabels],labels=list(labels.values()))
     scores = {key:scores[key] for key in sorted(scores.keys(),key=lambda k:scores[k][TOTAL][""],reverse=True)}
     outFile = open("/tmp/xxx","w")
     print(total[""],len(mainUserLabels),file=outFile)
     outFile.close()
-    return(render_template('overview.html',URL=URL,username=username,fileNames=fileNames,fileName=fileName,labels=labels,scores=scores,suggestions=suggestions,confusionMatrix=confusionMatrix,text=""))
+    return(render_template('overview.html',URL=URL,username=username,fileNames=fileNames,fileName=fileName,labels=labels,scores=scores,suggestionsCritical=suggestionsCritical,suggestions=suggestions,confusionMatrix=confusionMatrix,page=page,pageSize=pageSize,text=""))
 
 @app.route('/',methods=['GET','POST'])
 def process():
