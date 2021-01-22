@@ -7,14 +7,13 @@
     <p>
     {{ text }}
     <form action="{{ URL+"overview" }}" method="post">
-    <strong>Bestand</strong>:
     <select name="fileName" onchange="this.form.submit()">
         {% for f in fileNames %}
             <option value="{{ f }}" 
             {% if f == fileName %} 
             selected 
             {% endif %}
-            >{{ f }}</option>
+            >{{ fileNames[f] }}</option>
         {% endfor %}
     </select>
     <strong>Gebruiker</strong>: {{ username }}

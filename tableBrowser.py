@@ -29,7 +29,7 @@ USERFILE = "users.txt"
 REGISTERFILE = "register.txt"
 LOGFILE = "logfile"
 LABELFILE = "LABELS.txt"
-BORDERPAGES = 4
+BORDERPAGES = 5
 PASSWORDLENGTH = 8
 UNLABELED = ""
 UNLABELEDTEXT = "UNLABELED"
@@ -271,6 +271,8 @@ def register():
         users = readUsers()
         if username in users:
            return(render_template("register.html", message="E-mailadres "+username+" wordt al gebruikt, kies een ander adres",success=""))
+        if not re.search(".+@.+\..+",username):
+           return(render_template("register.html", message="ongeldig e-mailadres "+username,success=""))
         password = makePassword()
         users[username] = encode(password)
         writeUsers(users)
@@ -297,10 +299,23 @@ def readLabels(fileName):
     return(labels)
 
 def getFileNames():
+    displayNames = {"distance-twitter-202003.csv":"1,5m: maart 2020 (1000 tweets)",
+                    "distance-twitter-202004.csv":"1,5m: april 2020 (1000 tweets)",
+                    "distance-twitter-202005.csv":"1,5m: mei 2020 (1000 tweets)",
+                    "distance-twitter-202006.csv":"1,5m: juni 2020 (1000 tweets)",
+                    "distance-twitter-202007.csv":"1,5m: juli 2020 (1000 tweets)",
+                    "distance-twitter-202008.csv":"1,5m: augustus 2020 (1000 tweets)",
+                    "distance-twitter-202009.csv":"1,5m: september 2020 (1000 tweets)",
+                    "distance-twitter-202010.csv":"1,5m: oktober 2020 (1000 tweets)",
+                    "distance-twitter-oefen.csv":"1,5m: oefenen (100 tweets)"}
     allFiles = sorted(os.listdir(DATADIR))
-    dataFiles = []
+    dataFiles = {}
     for fileName in allFiles:
-        if re.search(CSVSUFFIX,fileName): dataFiles.append(fileName)
+        if re.search(CSVSUFFIX,fileName): 
+            if re.search("^202009",fileName) or re.search("^distance-twitter",fileName) or re.search("^testing", fileName):
+                if fileName in displayNames: dataFiles[fileName] = displayNames[fileName]
+                else: dataFiles[fileName] = fileName
+    dataFiles = {f:dataFiles[f] for f in sorted(dataFiles.keys(),reverse=True)}
     return(dataFiles)
 
 def anonymize(users,userName):
@@ -322,6 +337,10 @@ def findId(data,tweetId):
         if data[i][ID] == tweetId: return(i)
     return()
 
+@app.route("/guidelines",methods=["GET","POST"])
+def guidelines():
+    return(render_template('guidelines.html'))
+
 @app.route("/overview",methods=["GET","POST"])
 def overview():
     global data,humanLabels
@@ -329,7 +348,7 @@ def overview():
     if not "username" in session: return(redirect(URL+"login"))
     username = session["username"]
     fileNames = getFileNames()
-    fileName = fileNames[0]
+    fileName = list(fileNames.keys())[0]
     users = readUsers()
     anonymizedUsers = anonymizeAllUsers(users)
     page = ""
@@ -337,7 +356,7 @@ def overview():
     if request.method == "GET": formdata = request.args
     elif request.method == "POST": formdata = request.form
     for key in formdata:
-        if key == "fileName" and formdata["fileName"] in fileNames:
+        if key == "fileName" and formdata["fileName"] in fileNames.keys():
             fileName = formdata["fileName"]
         elif key == "page" and formdata["page"] != "":
             page = int(formdata["page"])
@@ -418,7 +437,7 @@ def process():
     changeFieldsStatus = ""
     fieldsStatus = getFieldsStatus(fieldsShow)
     fileNames = getFileNames()
-    fileName = fileNames[0]
+    fileName = list(fileNames.keys())[0]
     lastFileName = ""
     query = ""
     lastQuery = ""
@@ -436,9 +455,9 @@ def process():
         elif key == "size": pageSize = int(formdata["size"])
         elif key == "pageSize" and formdata["pageSize"] != "": 
             pageSize = int(formdata["pageSize"])
-        elif key == "fileName" and formdata["fileName"] in fileNames: 
+        elif key == "fileName" and formdata["fileName"] in fileNames.keys(): 
             fileName = formdata["fileName"]
-        elif key == "lastFileName" and formdata["lastFileName"] in fileNames: 
+        elif key == "lastFileName" and formdata["lastFileName"] in fileNames.keys(): 
             lastFileName = formdata["lastFileName"]
         elif key == "query": 
             query = formdata["query"]
