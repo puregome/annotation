@@ -95,6 +95,7 @@
     {% for item in data %}
         {% if loop.index0 in selected %}
         {% set key = loop.index0 %}
+        {% if fileName != "testing-202003-202012.csv" or humanLabels[data[key]["id"]][0] == "" or key == lastChanged or human != "" %}
         {% set __ = index.append(1) %}
         <tr>
 	    <td align="right" valign="top">{{ key+1 }}.</td>
@@ -133,6 +134,7 @@
             {% endif %}
 	</tr>
         {% endif %}
+        {% endif %}
     {% endfor %}
     </table>
     </font>
@@ -151,6 +153,7 @@
     <hr>
     {% endif %}
     </form>
+{% if fileName != "vaccin-202001-202101.csv" and fileName != "testing-202003-202012.csv" and fileName != "eenzaam_2020.csv" %}
 <h2>Annotatie-richtlijnen: 1.5 meter</h2>
 <p>Beantwoord de volgende vraag voor elk bericht:</p>
 
@@ -179,42 +182,7 @@
 
 <p><strong>ANDERS</strong> (neutraal) - Ik ben benieuwd naar dat onderzoek waarin wordt bewezen dat de 1,5 meter afstand onzin is en dat afstand buiten niet nodig is. Kun je een link sturen of de titel(s) van de wetenschappelijke publicatie(s)?</p>
 </div>
+{% endif %}
 
-<h2>Annotatie-richtlijnen: Mondkapjes</h2>
-<p>Beantwoord de volgende vraag voor elk bericht:</p>
-
-<p>"Is de schrijver van het bericht het eens of oneens met het beleid om géén mondkapjes te dragen?"</p>
-
-<p>Let op dat deze vraag gaat over het beleid van februari t/m september 2020, waarin de regering het gebruik van mondkapjes niet adviseerde. Als een bericht dus voor mondkapjes is, is de schrijver tegen het beleid, en is het label dus ONEENS. Als de schrijver tegen mondkapjes is, is het label EENS.</p>
-
-<p>Als het bericht niet over mondkapjes gaat is het label ANDERS. Ook als het bericht neutraal is over het gebruik van mondkapjes, of als de mening van de schrijver erg onduidelijk is, is het label ANDERS. Als het bericht een hashtag bevat over mondkapjes maar verder helemaal niet over mondkapjes gaat is het label ANDERS.</p>
-
-<p>Als het bericht gaat over mondkapjes in andere landen en er geen vergelijking is met Nederland, dan is het label ANDERS.</p>
-
-<p>Het beleid gaat over mondkapjes voor een algemeen publiek. Als een bericht gaat over mondkapjes voor de zorg is het label ANDERS.</p>
-
-<p>Als een bericht waarschijnlijk of zeker sarcastisch is of een grap, dan is de bedoeling dat het geannoteerd wordt alsof het een gewoon bericht is.</p>
-
-<p>In het algemeen is het de bedoeling om niet te voorzichtig te annoteren. Als de mening van de schrijver afgeleid kan worden uit het bericht dan moet deze mening geannoteerd worden met EENS of ONEENS.</p>
-
-<div style="background-color:lightgrey; font-size:smaller;">
-<h3>Voorbeelden:</h3>
-
-<p><strong>ONEENS</strong> - Is dat ook niet de reden dat de Nederlandse burger wordt afgeraden om een mondkapje te dragen: gewoonweg omdat er een gebrek aan is terwijl het wel bescherming biedt tegen het coronavirus! Rutte laat ons verrekken!</p>
-
-<p><strong>EENS</strong> - Er loopt daar niemand. Je komt dus ook niemand tegen. Ik passeerde hem op minstens 5 meter afstand. Dat mondkapje is totale onzin.</p>
-
-<p><strong>ANDERS</strong> (want: specifiek voor de zorg) - als ik in de zorg had gewerkt had ik ook van te voren mondkapje gekocht (met verwisselbare carbonfilters) dat laat ik niet afhangen van een falende overheid. net als alcohol om de boel te desinfecteren....had namelijk eind januarie in de gaten dat er een pandemie aan zat te komen</p>
-
-<p><strong>ANDERS</strong> (want: gaat niet over mondkapjes-beleid) 2x per week tussen 8-9 uur, dan is het nog rustig. Maar dan nog áltijd van die pannenkoeken die echt zowat tegen je aan gaan staan. Echt onbegrijpelijk. Vanmorgen vrouw die vond dat het kon want zij droeg mondkapje. Echt 🤦🤦🤦</p>
-
-<p><strong>ANDERS</strong> (want: gaat niet over Nederland, en is neutraal) - Het ministerie van Volksgezondheid heeft alle Israëliërs opgeroepen het huis niet te verlaten zonder mondkapje te dragen.</p>
-
-<p><strong>ONEENS</strong> (gaat over New York, maar wel een vergelijking met Nederland) - ..en In New York ook mondkapjes...hebben al die buitenlandse deskundigen het mis, of is RIVM toch niet zo deskundig??</p>
-
-<p><strong>EENS</strong> (ondanks mogelijk sarcasme) - En een mondkapje is niet nodig hoor Peter. Echt niet.</p>
-
-<p><strong>ANDERS</strong> (mening onduidelijk) - Moet je toch zelf weten. Zelfs als je mondkapje op gehad zou hebben. Dit virus is levensgevaarlijk en besmettelijk.</p>
-</div>
 </body>
 </html>

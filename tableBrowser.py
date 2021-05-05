@@ -312,7 +312,7 @@ def getFileNames():
     dataFiles = {}
     for fileName in allFiles:
         if re.search(CSVSUFFIX,fileName): 
-            if re.search("^202009",fileName) or re.search("^distance-twitter",fileName) or re.search("^testing", fileName):
+            if re.search("^202009",fileName) or re.search("^distance-twitter",fileName) or re.search("^(testing|vaccin|mondkapje-2|eenzaam)", fileName):
                 if fileName in displayNames: dataFiles[fileName] = displayNames[fileName]
                 else: dataFiles[fileName] = fileName
     dataFiles = {f:dataFiles[f] for f in sorted(dataFiles.keys(),reverse=True)}
@@ -441,6 +441,7 @@ def process():
     lastFileName = ""
     query = ""
     lastQuery = ""
+    lastChanged = -1
     if request.method == "GET": formdata = request.args
     elif request.method == "POST": formdata = request.form
     for key in formdata:
@@ -482,6 +483,7 @@ def process():
                     if humanLabels[data[index][ID]][0] != label:
                         storeHumanLabel(fileName,index,label,username)
                         generalize(fileName,index,label,username)
+                        lastChanged = index
     if changeFieldsStatus != "":
         fieldsShow[changeFieldsStatus] = not fieldsShow[changeFieldsStatus]
         fieldsStatus = getFieldsStatus(fieldsShow)
@@ -498,6 +500,6 @@ def process():
     nbrOfLabeled = len([i for i in range(0,len(data)) if humanLabels[data[i][ID]][0] != UNLABELED])
     if len(readRegisterFile()) > 0 and username == WEBMASTERMAIL:
         helpText = "ALERT: NEW REGISTERED USERS!"
-    return(render_template('template-nl.html', data=data, labels=labels, fieldsShow=fieldsShow , human=human, selected=selected, nbrOfSelected=nbrOfSelected, nbrOfLabeled=nbrOfLabeled, humanLabels=humanLabels, page=page, minPage=minPage, maxPage=maxPage, pageSize=pageSize, URL=URL, username=username, fieldsStatus=fieldsStatus, fileNames=fileNames, fileName=fileName, helpText=helpText, query=query))
+    return(render_template('template-nl.html', data=data, labels=labels, fieldsShow=fieldsShow , human=human, selected=selected, nbrOfSelected=nbrOfSelected, nbrOfLabeled=nbrOfLabeled, humanLabels=humanLabels, page=page, minPage=minPage, maxPage=maxPage, pageSize=pageSize, URL=URL, username=username, fieldsStatus=fieldsStatus, fileNames=fileNames, fileName=fileName, helpText=helpText, query=query, lastChanged=lastChanged))
 
 app.secret_key = "PLEASEREPLACETHIS"
